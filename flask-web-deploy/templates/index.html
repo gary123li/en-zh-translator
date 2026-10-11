@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#4f46e5">
+<meta name="format-detection" content="telephone=no">
+<title>AI 中英互译</title>
+<style>
+  :root{
+    --bg1:#eef2ff; --bg2:#f8fafc;
+    --card:#ffffff;
+    --primary:#4f46e5; --primary-d:#4338ca; --primary-l:#eef2ff;
+    --text:#1f2937; --muted:#6b7280; --border:#e5e7eb;
+    --ok:#059669; --shadow:0 10px 30px rgba(79,70,229,.10);
+    --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%;}
+  body{
+    font-family:"PingFang SC","Microsoft YaHei","Segoe UI",system-ui,sans-serif;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+    min-height:100vh;color:var(--text);padding:24px 20px 48px;
+    overflow-x:hidden;                       /* 手机端禁止横向滚动 */
+    -webkit-tap-highlight-color:transparent; /* 去掉点击时的灰色高亮块 */
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+
+  /* ---------- header ---------- */
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:20px}
+  .brand{display:flex;align-items:center;gap:12px}
+  .logo{
+    width:44px;height:44px;border-radius:12px;flex:none;
+    background:linear-gradient(135deg,var(--primary),#7c3aed);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;font-weight:700;
+    box-shadow:0 8px 18px rgba(79,70,229,.35);
+  }
+  h1{font-size:22px;font-weight:700;letter-spacing:.5px}
+  .sub{font-size:13px;color:var(--muted);margin-top:2px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap}
+  .badge{
+    font-size:12px;padding:6px 12px;border-radius:999px;background:#fff;
+    border:1px solid var(--border);color:var(--muted);display:flex;align-items:center;gap:6px;
+  }
+  .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+  .dot.wait{background:#f59e0b}
+
+  /* ---------- 控制条 ---------- */
+  .bar{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    padding:12px 16px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    box-shadow:var(--shadow);margin-bottom:18px;
+  }
+  .field{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+  select{
+    font:inherit;font-size:13px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);
+    background:#fff;color:var(--text);cursor:pointer;outline:none;max-width:260px;
+  }
+  select:focus{border-color:var(--primary)}
+  .spacer{flex:1}
+
+  /* ---------- 主体 ---------- */
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .pane{
+    background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+    box-shadow:var(--shadow);display:flex;flex-direction:column;overflow:hidden;
+  }
+  .pane-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:12px 16px;border-bottom:1px solid var(--border);background:#fcfdff;
+  }
+  .pane-title{font-size:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+  .flag{font-size:12px;padding:2px 8px;border-radius:6px;background:var(--primary-l);color:var(--primary);font-weight:600}
+  .cnt{font-size:12px;color:var(--muted)}
+  textarea{
+    width:100%;border:none;outline:none;resize:none;padding:16px;
+    font:inherit;font-size:15px;line-height:1.75;color:var(--text);
+    background:transparent;min-height:260px;flex:1;
+  }
+  textarea::placeholder{color:#9ca3af}
+  textarea[readonly]{background:#fcfdff}
+  .pane-foot{
+    display:flex;align-items:center;gap:8px;padding:10px 14px;border-top:1px solid var(--border);background:#fcfdff;
+  }
+  .btn{
+    font:inherit;font-size:13px;padding:7px 14px;border-radius:9px;cursor:pointer;
+    border:1px solid var(--border);background:#fff;color:var(--text);transition:.15s;
+  }
+  .btn:hover{border-color:var(--primary);color:var(--primary)}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  .btn.primary{
+    background:linear-gradient(135deg,var(--primary),#7c3aed);color:#fff;border:none;
+    font-size:15px;font-weight:600;padding:12px 34px;border-radius:12px;
+    box-shadow:0 8px 20px rgba(79,70,229,.3);
+  }
+  .btn.primary:hover{filter:brightness(1.07);color:#fff}
+  .actions{display:flex;align-items:center;justify-content:center;gap:14px;margin:18px 0}
+  .hint{font-size:12px;color:var(--muted)}
+  kbd{
+    background:#f3f4f6;border:1px solid var(--border);border-bottom-width:2px;
+    border-radius:5px;padding:1px 6px;font-size:11px;font-family:inherit;
+  }
+
+  /* ---------- 历史 ---------- */
+  .history{margin-top:22px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+  .history summary{padding:12px 16px;cursor:pointer;font-size:14px;font-weight:600;list-style:none;display:flex;justify-content:space-between;align-items:center}
+  .history summary::-webkit-details-marker{display:none}
+  .hlist{max-height:240px;overflow:auto;border-top:1px solid var(--border)}
+  .hitem{padding:10px 16px;border-bottom:1px solid #f3f4f6;font-size:13px;cursor:pointer}
+  .hitem:hover{background:#f9fafb}
+  .hitem .en{color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .hitem .cn{color:var(--text);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .empty{padding:16px;text-align:center;color:var(--muted);font-size:13px}
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:40px;transform:translate(-50%,20px);
+    background:#111827;color:#fff;font-size:13px;padding:10px 18px;border-radius:10px;
+    opacity:0;pointer-events:none;transition:.25s;z-index:99;
+  }
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  .examples{display:flex;gap:6px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:4px 10px;border-radius:999px;background:#f3f4f6;color:var(--muted);cursor:pointer;border:1px solid transparent}
+  .chip:hover{background:var(--primary-l);color:var(--primary);border-color:#c7d2fe}
+
+  /* ==================== 移动端适配 (<=860px: 平板/竖屏手机) ==================== */
+  @media (max-width:860px){
+    .grid{grid-template-columns:1fr;gap:14px}
+
+    /* 控制条: 让"方向"下拉占满一行, 隐藏右侧提示文字 */
+    .bar{gap:12px;padding:12px 14px}
+    .field{width:100%}
+    select{flex:1;min-width:0;max-width:none;min-height:40px;padding:9px 10px}
+    .bar .hint{display:none}
+
+    /* 输入框: 字号 >=16px, 否则 iOS 聚焦时会自动放大整页 */
+    textarea{
+      font-size:16px;min-height:150px;padding:14px;
+      flex:none;                 /* 高度改由 JS 跟随内容, 不再被拉平对齐 */
+      max-height:46vh;overflow-y:auto;
+    }
+
+    /* 翻译按钮吸底, 方便单手操作 */
+    .actions{
+      position:sticky;bottom:calc(8px + env(safe-area-inset-bottom,0px));
+      z-index:20;margin:14px 0 0;gap:10px;
+    }
+    .btn.primary{width:100%;padding:14px 0;font-size:16px;border-radius:14px}
+    .actions .hint{display:none}          /* 手机上没有 Ctrl+Enter */
+
+    .hlist{max-height:200px}
+    .chip{padding:6px 12px}               /* 加大点击热区 */
+  }
+
+  /* ==================== 窄屏手机 (<=560px) ==================== */
+  @media (max-width:560px){
+    body{padding:14px 10px calc(20px + env(safe-area-inset-bottom,0px))}
+    header{gap:10px;margin-bottom:14px}
+    .logo{width:38px;height:38px;font-size:17px;border-radius:10px}
+    h1{font-size:18px}
+    .sub{font-size:11px}
+    .badge{font-size:11px;padding:5px 10px}
+    .bar{padding:10px 12px;margin-bottom:14px}
+    .pane-head{padding:10px 12px}
+    .pane-foot{padding:8px 12px;flex-wrap:wrap}
+    textarea{min-height:130px;padding:12px}
+    .btn{padding:9px 14px;min-height:38px}
+    .history{margin-top:16px}
+  }
+
+  /* 横屏手机: 高度很小时压缩竖向留白 */
+  @media (max-height:480px) and (orientation:landscape){
+    body{padding:10px 12px 16px}
+    textarea{min-height:96px;max-height:38vh}
+    .actions{position:static}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="brand">
+      <div class="logo">译</div>
+      <div>
+        <h1>AI 中英互译</h1>
+        <div class="sub">MarianMT 神经机器翻译</div>
+      </div>
+    </div>
+    <div class="badges">
+      <span class="badge"><span class="dot" id="dot"></span><span id="status">加载中…</span></span>
+    </div>
+  </header>
+
+  <div class="bar">
+    <div class="field">
+      <span>方向</span>
+      <select id="dir">
+        <option value="auto" selected>自动识别</option>
+        <option value="en2zh">英译中</option>
+        <option value="zh2en">中译英</option>
+      </select>
+    </div>
+    <div class="spacer"></div>
+    <span class="hint">长文本会自动分句逐句翻译</span>
+  </div>
+
+  <div class="grid">
+    <!-- 输入 -->
+    <div class="pane">
+      <div class="pane-head">
+        <div class="pane-title"><span class="flag" id="inFlag">EN</span><span id="inTitle">英文原文</span></div>
+        <span class="cnt" id="inCnt">0 字符</span>
+      </div>
+      <textarea id="src" placeholder="在此输入或粘贴英文…"></textarea>
+      <div class="pane-foot">
+        <button class="btn" id="btnClear">清空</button>
+        <div class="examples" id="examples"></div>
+      </div>
+    </div>
+
+    <!-- 输出 -->
+    <div class="pane">
+      <div class="pane-head">
+        <div class="pane-title"><span class="flag" id="outFlag">中</span><span id="outTitle">中文译文</span></div>
+        <span class="cnt" id="meta"></span>
+      </div>
+      <textarea id="dst" readonly placeholder="译文将显示在这里…"></textarea>
+      <div class="pane-foot">
+        <button class="btn" id="btnCopy">复制译文</button>
+        <span class="hint" id="time"></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn primary" id="btnGo">翻 译</button>
+    <span class="hint">快捷键 <kbd>Ctrl</kbd> + <kbd>Enter</kbd></span>
+  </div>
+
+  <details class="history">
+    <summary><span>历史记录</span><span class="hint" id="clearHis">清空历史</span></summary>
+    <div class="hlist" id="hlist"><div class="empty">暂无记录</div></div>
+  </details>
+
+</div>
+
+<div id="toast"></div>
+
+<script>
+const $ = id => document.getElementById(id);
+const src = $('src'), dst = $('dst'), btnGo = $('btnGo');
+const HIST_KEY = 'bizh_history';
+
+/* ---------- 方向配置 ---------- */
+const DIRS = {
+  en2zh: {
+    inFlag:'EN', inTitle:'英文原文', outFlag:'中', outTitle:'中文译文',
+    ph:'在此输入或粘贴英文…',
+    examples:[
+      ['示例 1 · 习语', "It's a piece of cake."],
+      ['示例 2 · 头衔+数字', 'Dr. Smith, who works at NASA, said the mission cost about 2.5 million dollars.'],
+      ['示例 3 · 口语', "I'm sorry, I didn't catch what you said just now."]
+    ]
+  },
+  zh2en: {
+    inFlag:'中', inTitle:'中文原文', outFlag:'EN', outTitle:'英文译文',
+    ph:'在此输入或粘贴中文…',
+    examples:[
+      ['示例 1 · 成语', '这是小菜一碟。'],
+      ['示例 2 · 数字+专名', '2023年，苹果公司的营收达到3830亿美元，同比增长8%。'],
+      ['示例 3 · 口语', '对不起，我刚才没听清你说的话。']
+    ]
+  }
+};
+let META = null;                       // /api/models 的返回
+/* 自动识别规则(只用于界面联动, 真正以后端返回的 dir 为准)。
+   阈值由 /api/models 下发, 保证和后端 detect_direction 完全一致; 未加载时用默认值 */
+function detCfg(){ return (META && META.detect) || {zh_ratio: 0.3, min_cn: 1}; }
+function detectDir(t){
+  const p = detCfg();
+  const han = (t.match(/[\u4e00-\u9fff\u3400-\u4dbf\uf900-\ufaff]/g) || []).length;
+  const en  = (t.match(/[A-Za-z]/g) || []).length;
+  const cjk = han + (t.match(/[\u3000-\u303f\uff01-\uff20\uff3b-\uff40\uff5b-\uff65]/g) || []).length;
+  if(en === 0 && cjk > 0) return 'zh2en';   // 兜底1: 没有英文字母但有中文痕迹 -> 中译英
+  if(han < p.min_cn) return 'en2zh';        // 兜底2/3: 汉字太少 -> 英译中
+  return han >= en * p.zh_ratio ? 'zh2en' : 'en2zh';
+}
+/* 界面上当前显示的方向: 手选就用手选的, auto 就按输入内容判断 */
+function uiDir(){
+  const v = $('dir').value;
+  return v === 'auto' ? detectDir(src.value) : v;
+}
+function applyDirUI(d){
+  const cfg = DIRS[d];
+  $('inFlag').textContent = cfg.inFlag;  $('inTitle').textContent = cfg.inTitle;
+  $('outFlag').textContent = cfg.outFlag; $('outTitle').textContent = cfg.outTitle;
+  src.placeholder = cfg.ph + '\n例如: ' + cfg.examples[0][1];
+  $('examples').innerHTML = cfg.examples
+    .map(([name, ex]) => `<span class="chip" data-ex="${encodeURIComponent(ex)}">${name}</span>`).join('');
+  $('examples').querySelectorAll('.chip').forEach(c=>{
+    c.addEventListener('click', ()=>{
+      src.value = decodeURIComponent(c.dataset.ex);
+      src.dispatchEvent(new Event('input'));
+      autoResize(src);
+      translate();
+    });
+  });
+}
+
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg){
+  const t = $('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+/* ---------- 移动端: 输入框/译文框高度跟随内容 ----------
+   桌面端两栏由 flex 拉平对齐, 不需要处理; 移动端才让高度随内容增长(上限 46vh) */
+function isMobile(){ return window.matchMedia('(max-width:860px)').matches; }
+function autoResize(el){
+  if(!isMobile()){ el.style.height = ''; return; }
+  el.style.height = 'auto';
+  const max = Math.round(window.innerHeight * (window.innerHeight < 480 ? 0.38 : 0.46));
+  el.style.height = Math.min(el.scrollHeight + 2, max) + 'px';
+}
+
+/* ---------- 字数 ---------- */
+src.addEventListener('input', ()=>{
+  $('inCnt').textContent = src.value.length + ' 字符';
+  autoResize(src);
+  if($('dir').value === 'auto') applyDirUI(detectDir(src.value));
+});
+window.addEventListener('resize', ()=>{ autoResize(src); autoResize(dst); });
+$('dir').addEventListener('change', ()=> applyDirUI(uiDir()));
+
+/* ---------- 加载模型列表 ---------- */
+fetch('/api/models').then(r=>r.json()).then(d=>{
+  META = d;
+  // auto 时还没有文本, 用后端指定的"默认绑定方向"预热下拉框
+  const initDir = d.current_dir;
+  applyDirUI(initDir);
+  $('dir').value = initDir;
+  $('dot').classList.remove('wait');
+  $('status').textContent = '就绪';
+}).catch(()=>{
+  $('status').textContent = '服务未连接';
+});
+
+/* ---------- 翻译 ---------- */
+async function translate(){
+  const text = src.value.trim();
+  if(!text){ toast('请先输入要翻译的内容'); src.focus(); return; }
+
+  btnGo.disabled = true; btnGo.textContent = '翻译中…';
+  $('time').textContent = '';
+  try{
+    const res = await fetch('/api/translate', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ text, dir: $('dir').value, num_beams: 8 })
+    });
+    const data = await res.json();
+    if(!data.ok){ toast(data.error || '翻译失败'); return; }
+    dst.value = data.result;
+    autoResize(dst);
+    $('meta').textContent = data.sentences + ' 句';
+    $('time').textContent = `耗时 ${data.elapsed}s`;
+    // auto 时后端会告诉真实方向, 把界面同步过去(标题/示例一起变)
+    if(data.dir && data.dir !== uiDir()) applyDirUI(data.dir);
+    addHistory(text, data.result, data.dir);
+  }catch(e){
+    toast('请求失败: ' + e);
+  }finally{
+    btnGo.disabled = false; btnGo.textContent = '翻 译';
+  }
+}
+
+btnGo.addEventListener('click', translate);
+document.addEventListener('keydown', e=>{
+  if((e.ctrlKey || e.metaKey) && e.key === 'Enter'){ e.preventDefault(); translate(); }
+});
+
+/* ---------- 其他按钮 ---------- */
+$('btnClear').addEventListener('click', ()=>{
+  src.value=''; dst.value=''; $('inCnt').textContent='0 字符'; $('meta').textContent=''; $('time').textContent='';
+  autoResize(src); autoResize(dst);
+  if(!isMobile()) src.focus();
+});
+$('btnCopy').addEventListener('click', async ()=>{
+  if(!dst.value){ toast('还没有译文'); return; }
+  try{ await navigator.clipboard.writeText(dst.value); toast('已复制'); }
+  catch(e){ dst.select(); document.execCommand('copy'); toast('已复制'); }
+});
+/* ---------- 历史 ---------- */
+function loadHistory(){
+  const h = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  const box = $('hlist');
+  if(!h.length){ box.innerHTML = '<div class="empty">暂无记录</div>'; return; }
+  box.innerHTML = h.map(it=>`
+    <div class="hitem" data-src="${encodeURIComponent(it.src)}" data-dir="${it.dir || 'en2zh'}">
+      <div class="en">${it.dir === 'zh2en' ? '[中译英] ' : '[英译中] '}${escapeHtml(it.src)}</div>
+      <div class="cn">${escapeHtml(it.dst)}</div>
+    </div>`).join('');
+  box.querySelectorAll('.hitem').forEach(el=>{
+    el.addEventListener('click', ()=>{
+      $('dir').value = el.dataset.dir;
+      src.value = decodeURIComponent(el.dataset.src);
+      applyDirUI(el.dataset.dir);
+      src.dispatchEvent(new Event('input'));
+      autoResize(src);
+      dst.value = ''; autoResize(dst);
+    });
+  });
+}
+function addHistory(text, result, dir){
+  if(!result) return;
+  let h = JSON.parse(localStorage.getItem(HIST_KEY) || '[]');
+  h = [{src: text, dst: result, dir: dir || uiDir()}, ...h.filter(x=>x.src !== text)].slice(0, 20);
+  localStorage.setItem(HIST_KEY, JSON.stringify(h));
+  loadHistory();
+}
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+$('clearHis').addEventListener('click', e=>{
+  e.preventDefault(); e.stopPropagation();
+  localStorage.removeItem(HIST_KEY); loadHistory(); toast('历史已清空');
+});
+loadHistory();
+</script>
+</body>
+</html>
